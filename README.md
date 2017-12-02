@@ -4,9 +4,11 @@
 
 ## Assumption:
  * You can hold/reserve maximum 10 seats at a time.
- * Seat numbers are available.
- * Seats are divided into rows and each row has 10 seats. This can be changed easily.
- * The Total capacity is 26*(Maximum seats in each row, which is set to 10)=260 Seats.
+ * Seat numbers are available. (e.g A1 A2 C3 Z9)
+ * Seats are divided into rows from A-Z and each row has 10 seats. This can be changed easily.
+ * So which are the best seats? I'm assuming Row A seats are the best seats as it's closest to the Stage.
+ * Row A seats would be allocated first if available adjacent for a group hold. If not, then allocate seats from row B.
+ * Total capacity is 26*(Maximum seats in each row, which is set to 10)=260 Seats.
  * Everything is stored in-memory.
  * Seats hold would be valid only for 30secs. (It's configurable)
  * Seats will be allocated in sequence if available. 
