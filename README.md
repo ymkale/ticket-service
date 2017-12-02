@@ -16,6 +16,7 @@
  * If seats are not available together, service will allocate seats wherever it's available in any Row.
  * Not a web service but can be easily converted into REST APIS using Spring boot.
  * You can find Integration Tests under /src/test/java/integration/test
+ * No email id validations.
 
 --- 
 ## Build Project By Maven

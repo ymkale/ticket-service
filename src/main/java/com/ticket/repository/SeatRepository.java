@@ -1,7 +1,10 @@
 package com.ticket.repository;
 
+import com.ticket.exception.TicketServiceException;
 import com.ticket.model.Seat;
 import com.ticket.model.SeatHoldDetails;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -12,11 +15,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class SeatRepository {
-
+    public static final Logger logger = LoggerFactory.getLogger(SeatRepository.class);
     private static SeatRepository seatRepository;
     private Map<String, List<Seat>> rowSeatMap = new HashMap<>();
     private Map<Integer, List<String>> seatsOnHold = new HashMap<>();
     private Map<Integer, SeatHoldDetails> seatHoldDetails = new HashMap<>();
+
 
     public static SeatRepository getInstance() {
         if (seatRepository == null) {
@@ -39,12 +43,12 @@ public class SeatRepository {
         return rowSeatMap.put(key, seats);
     }
 
-    public Collection<List<Seat>> noOfSeats() {
+    public Collection<List<Seat>> noOfSeats() throws TicketServiceException {
         try {
             return rowSeatMap.values();
-
         } catch (Exception ex) {
-            throw ex;
+            logger.error("Could not retrieve seats {}", ex.getMessage());
+            throw new TicketServiceException("Could not retrieve seats");
         }
     }
 
@@ -113,15 +117,15 @@ public class SeatRepository {
     /**
      * Clears expired seats
      */
-    public void cleanUpExpiredSeatHold() throws Exception {
+    public void cleanUpExpiredSeatHold() throws TicketServiceException {
         try {
             ExecutorService executor = Executors.newFixedThreadPool(2);
             executor.submit(() -> seatHoldDetails.entrySet()
                     .removeIf(entry -> entry.getValue().getDateCreated().isBefore(LocalDateTime.now())));
             executor.shutdown();
         } catch (Exception ex) {
-            //log something here
-            throw ex;
+            logger.error("Could not clean up seats {}", ex.getMessage());
+            throw new TicketServiceException("Could not clean up seats");
         }
     }
 }

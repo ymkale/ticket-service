@@ -1,7 +1,10 @@
 package com.ticket.finder;
 
+import com.ticket.exception.TicketServiceException;
 import com.ticket.model.SeatHoldDetails;
 import com.ticket.repository.SeatRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,11 +15,12 @@ import java.util.stream.Collectors;
 import static com.ticket.model.TicketAppConstants.*;
 
 public class SeatsFinder {
-
+    public static final Logger logger = LoggerFactory.getLogger(SeatsFinder.class);
     private SeatRepository seatRepository = SeatRepository.getInstance();
     private SeatFindHelper seatFindHelper = new SeatFindHelper();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock(true); //fair mode
     private char rowId = 'A';
-    private ReadWriteLock lock = new ReentrantReadWriteLock(true); //fair mode
+    private int fillUpPercentage = 25;
 
     /**
      * Returns a list of best available seats.
@@ -24,7 +28,7 @@ public class SeatsFinder {
      * @param noOfSeats
      * @return
      */
-    public List<String> findAndHoldSeats(int noOfSeats) {
+    public List<String> findAndHoldSeats(int noOfSeats) throws TicketServiceException {
         try {
             lock.writeLock().lock();
             boolean seatsFound = searchRowsForSeatsTogether(noOfSeats);
@@ -40,9 +44,9 @@ public class SeatsFinder {
                 }
                 return seatsNumbers;
             }
-        } catch (Exception ex) {
-            //Or we could catch a specific exception
-            throw ex;
+        } catch (Exception e) {
+            logger.error("exception while holding seats {}", e.getMessage());
+            throw new TicketServiceException(e.getMessage());
         } finally {
             lock.writeLock().unlock();
         }
@@ -55,7 +59,7 @@ public class SeatsFinder {
      * @return
      */
 
-    public boolean reserve(List<String> seatNumbers) throws Exception {
+    public boolean reserve(List<String> seatNumbers) throws TicketServiceException {
         try {
             lock.writeLock().lock();
             seatNumbers.stream()
@@ -66,8 +70,9 @@ public class SeatsFinder {
                                             .forEach(seat1 -> seat1.setIsReserved(true))
                     );
             return true;
-        } catch (Exception ex) {
-            throw ex;
+        } catch (Exception e) {
+            logger.error("exception while reserving seats {} exception {}", seatNumbers, e.getMessage());
+            throw new TicketServiceException(e.getMessage());
         } finally {
             lock.writeLock().unlock();
         }
@@ -78,7 +83,7 @@ public class SeatsFinder {
      *
      * @param seats
      */
-    public void releaseHold(List<String> seats) throws Exception {
+    public void releaseHold(List<String> seats) throws TicketServiceException {
         try {
             lock.writeLock().lock();
             seats.stream()
@@ -87,8 +92,9 @@ public class SeatsFinder {
                     .forEach(row ->
                             seatRepository.get(String.valueOf(row)).stream()
                                     .forEach(seat -> seat.setIsOnHold(false)));
-        } catch (Exception ex) {
-            throw ex;
+        } catch (Exception e) {
+            logger.error("exception while releasing seat hold {}", e.getMessage());
+            throw new TicketServiceException(e.getMessage());
         } finally {
             lock.writeLock().unlock();
         }
@@ -99,15 +105,15 @@ public class SeatsFinder {
      *
      * @return
      */
-    public Long numSeatsAvailable() throws Exception {
+    public Long numSeatsAvailable() throws TicketServiceException {
         try {
             lock.readLock().lock();
             return (26 * MAX_SEATS_IN_EACH_ROW) - seatRepository.noOfSeats().stream().mapToLong(value ->
                             value.stream().filter(seat -> seat.isReserved() || seat.isOnHold()).count()
             ).sum();
-        } catch (Exception ex) {
-            //log something here
-            throw ex;
+        } catch (Exception e) {
+            logger.warn("exception while retrieving available seats {}", e.getMessage());
+            throw new TicketServiceException(e.getMessage());
         } finally {
             lock.readLock().unlock();
         }
@@ -120,22 +126,22 @@ public class SeatsFinder {
      * @param seatNumbers
      * @return
      */
-    public boolean saveSeatsForHoldId(SeatHoldDetails seatHoldDetails, List<String> seatNumbers) throws Exception {
+    public boolean saveSeatsForHoldId(SeatHoldDetails seatHoldDetails, List<String> seatNumbers) throws TicketServiceException {
         try {
             lock.writeLock().lock();
 
             // Check if holdId is already exits in the map, it shouldn't
             if (seatRepository.seatsOnHoldContains(seatHoldDetails.getHoldId()) ||
                     seatRepository.seatHoldDetailsContains(seatHoldDetails.getHoldId())) {
-                return false; //throw new RuntimeException("Duplicate seatHoldDetails exception");
+                return false;
             } else {
                 seatRepository.saveSeatsOnHold(seatHoldDetails.getHoldId(), seatNumbers);
                 seatRepository.saveHoldIdDetails(seatHoldDetails.getHoldId(), seatHoldDetails);
                 return true;
             }
-        } catch (Exception ex) {
-            //log something here
-            throw ex;
+        } catch (Exception e) {
+            logger.error("exception while saving seats for holdId {} exception {}", seatHoldDetails.getHoldId(), e.getMessage());
+            throw new TicketServiceException(e.getMessage());
         } finally {
             lock.writeLock().unlock();
         }
@@ -164,7 +170,7 @@ public class SeatsFinder {
     /**
      * Clears expired seatHold
      */
-    public void cleanUpExpiredSeatHold() throws Exception {
+    public void cleanUpExpiredSeatHold() throws TicketServiceException {
         seatRepository.cleanUpExpiredSeatHold();
     }
 
@@ -176,7 +182,7 @@ public class SeatsFinder {
                 return true; //Stop searching and return.
             }
             if (rowId > MID_ROW) {
-                FILL_UP_PERCENTAGE = 100;
+                fillUpPercentage = 100;
             }
             rowId++;
         }
@@ -188,9 +194,9 @@ public class SeatsFinder {
             return true;
         } else {
             long count = seatRepository.get(String.valueOf(rowId)).stream().filter(seat -> seat.isReserved() || seat.isOnHold()).count();
-            return !((count == MAX_SEATS_IN_EACH_ROW ||
-                    (count * 100) / MAX_SEATS_IN_EACH_ROW >= FILL_UP_PERCENTAGE ||
-                    (MAX_SEATS_IN_EACH_ROW - count < noOfSeats)));
+            return !(count == MAX_SEATS_IN_EACH_ROW ||
+                    (count * 100) / MAX_SEATS_IN_EACH_ROW >= fillUpPercentage ||
+                    (MAX_SEATS_IN_EACH_ROW - count < noOfSeats));
         }
     }
 }

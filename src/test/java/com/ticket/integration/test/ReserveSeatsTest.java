@@ -35,7 +35,6 @@ public class ReserveSeatsTest {
         ticketService = new TicketServiceImpl();
         SeatHold seatHold = ticketService.findAndHoldSeats(4, "xyz-customer@mail.com");
         Assert.assertEquals("unexpected number of seats hold", 4, seatHold.getSeatNumbers().size());
-        Thread.sleep(1000);  // hold is valid for 15secs
         String confirmationId = ticketService.reserveSeats(seatHold.getHoldId(), "xyz-customer@mail.com");
         Assert.assertFalse(confirmationId.contains("expired"));
     }

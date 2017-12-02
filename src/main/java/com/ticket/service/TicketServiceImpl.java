@@ -3,6 +3,8 @@ package com.ticket.service;
 import com.ticket.finder.SeatsFinder;
 import com.ticket.model.SeatHold;
 import com.ticket.model.SeatHoldDetails;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -11,6 +13,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class TicketServiceImpl implements TicketService {
 
+    public static final Logger logger = LoggerFactory.getLogger(TicketServiceImpl.class);
     private SeatsFinder seatsFinder = new SeatsFinder();
 
     /**
@@ -26,9 +29,11 @@ public class TicketServiceImpl implements TicketService {
             if (aLong != null) {
                 return aLong.intValue();
             } else {
+                logger.warn("could not retrieve available seats {}");
                 return 0;
             }
         } catch (Exception e) {
+            logger.warn("exception while retrieving available seats {}", e.getMessage());
             return 0;
         }
     }
@@ -52,9 +57,11 @@ public class TicketServiceImpl implements TicketService {
                 else
                     return null;
             } else {
-                return null; // Or throw Exception or May be return an Optional.of SeatHold.
+                logger.info("not enough seats are available {}", numSeats);
+                return null; // Or throw exception or May be return an Optional.of SeatHold.
             }
-        } catch (Exception ex) {
+        } catch (Exception e) {
+            logger.error("exception while holding seats {}", e.getMessage());
             return null;
         }
     }
@@ -76,13 +83,16 @@ public class TicketServiceImpl implements TicketService {
                 if (reserved) {
                     seatHold.setConfirmationNumber(UUID.randomUUID().toString());
                     return seatHold.getConfirmationNumber();
-                } else
+                } else {
+                    logger.warn("could not reserve seats for holdId {}", seatHold.getHoldId());
                     return null; // Or We could throw exception with error response.
+                }
             } else {
                 seatsFinder.releaseHold(seatsFinder.getSeatsNumbersById(seatHoldId));
                 return "HoldId expired/NotFound, Please start over...";
             }
-        } catch (Exception ex) {
+        } catch (Exception e) {
+            logger.error("exception while reserving seats {}", e.getMessage());
             return null;
         }
     }
@@ -93,8 +103,8 @@ public class TicketServiceImpl implements TicketService {
     public void cleanUpExpiredSeatHold() {
         try {
             seatsFinder.cleanUpExpiredSeatHold();
-        } catch (Exception ex) {
-            //Log something here.
+        } catch (Exception e) {
+            logger.error("exception while seats clean up {}", e.getMessage());
         }
     }
 
@@ -109,7 +119,8 @@ public class TicketServiceImpl implements TicketService {
         // Check if holdId is already exits in the map, it shouldn't
         try {
             return seatsFinder.saveSeatsForHoldId(seatHoldDetails, seatNumbers);
-        } catch (Exception ex) {
+        } catch (Exception e) {
+            logger.error("exception while saving seats hold {}", e.getMessage());
             return false;
         }
     }
@@ -134,6 +145,4 @@ public class TicketServiceImpl implements TicketService {
     private boolean isValid(SeatHoldDetails seatHold) {
         return seatHold.getDateCreated().isAfter(LocalDateTime.now());
     }
-
-
 }
