@@ -12,8 +12,8 @@
  * Everything is stored in-memory.
  * Seats hold would be valid only for 30secs. (It's configurable)
  * Seats will be allocated in sequence if available. 
- * Rows will be filled 25% first and will be filled 100% after the venue is at 50% capacity.
- * If seats are not available together, service will allocate seats wherever its available.
+ * Rows would be filled 25% first. If the Venue is at 50% capacity,rows would be filled up 100%.
+ * If seats are not available together, service will allocate seats wherever it's available in any Row.
  * Not a web service but can be easily converted into REST APIS using Spring boot.
  * You can find Integration Tests under /src/test/java/integration/test
 
