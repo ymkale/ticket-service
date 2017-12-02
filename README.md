@@ -1,8 +1,8 @@
-#Ticket Service
+# Ticket Service
 ---
-####Implementation of a simple ticket service that facilitates the discovery, temporary hold, and final reservation of seats.
+#### Implementation of a simple ticket service that facilitates the discovery, temporary hold, and final reservation of seats.
 
-##Assumption:
+## Assumption:
  * You can hold/reserve maximum 10 seats at a time.
  * Seat numbers are available.
  * Seats are divided into rows and each row has 10 seats. This can be changed easily.
@@ -16,7 +16,7 @@
  * You can find Integration Tests under /src/test/java/integration/test
 
 --- 
-##Build Project By Maven
+## Build Project By Maven
 
 Execute following command to build the project. This will take couple of sec to build.
 
@@ -30,7 +30,7 @@ Following command will build the project as well run the Test cases
 $ mvn clean package
 ```
 
-##Test using command line tool
+## Test using command line tool
 Execute following command to test the service and follow the interactive Prompt 
 ```
 $ cd target
