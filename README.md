@@ -19,15 +19,15 @@
  * No email id validations.
 
 --- 
-## Build Project By Maven
+## Build Project using Maven
 
-Execute following command to build the project. This will take couple of sec to build.
+Execute following command to build the project. This will take couple of secs to build.
 
 ```
 $ cd ticket-service
 ```
 
-Following command will build the project as well run the Test cases
+Following command will build the project as well as execute the Test cases
 
 ```
 $ mvn clean package
